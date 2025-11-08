@@ -34,8 +34,6 @@ OWNER = os.getenv("OWNER", "Soporte")
 auth_system = AuthSystem(ADMIN_ID, ALLOWED_GROUP)
 user_data_store = {}
 
-# ... (el resto de tu código se mantiene EXACTAMENTE IGUAL)
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
@@ -148,7 +146,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 
                 output_path = generar_comprobante(data, COMPROBANTE1_CONFIG)
                 if await send_document(output_path, f"✅ Comprobante Nequi generado por {OWNER}"):
-                    # Movimiento negativo
                     data_mov = data.copy()
                     data_mov["nombre"] = data["nombre"].upper()
                     data_mov["valor"] = -abs(data["valor"])
@@ -174,7 +171,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 
                 output_path = generar_comprobante(data, COMPROBANTE4_CONFIG)
                 if await send_document(output_path, f"✅ Comprobante Transfiya generado por {OWNER}"):
-                    # Movimiento negativo
                     data_mov2 = {
                         "telefono": data["telefono"],
                         "valor": -abs(data["valor"]),
@@ -199,7 +195,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
                 output_path = generar_comprobante(data, COMPROBANTE_QR_CONFIG)
                 if await send_document(output_path, f"✅ Comprobante QR generado por {OWNER}"):
-                    # Movimiento adicional
                     data_mov_qr = {
                         "nombre": data["nombre"].upper(),
                         "valor": -abs(data["valor"])
@@ -219,13 +214,11 @@ async def gratis_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     chat_id = update.effective_chat.id
     
     try:
-        # Allow admin to use command in any chat
         if user_id == ADMIN_ID or auth_system.is_admin(user_id):
             logger.info(f"Admin {user_id} executed /gratis in chat {chat_id}")
             auth_system.set_gratis_mode(True)
             await update.message.reply_text("✅ Modo GRATIS activado: Todos pueden usar el bot.")
         else:
-            # Non-admins must be in ALLOWED_GROUP
             if chat_id != ALLOWED_GROUP:
                 logger.warning(f"Non-admin {user_id} tried /gratis in unauthorized chat {chat_id}")
                 await update.message.reply_text("🚫 Este comando solo puede usarse en el grupo autorizado.")
@@ -244,13 +237,11 @@ async def off_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     chat_id = update.effective_chat.id
     
     try:
-        # Allow admin to use command in any chat
         if user_id == ADMIN_ID or auth_system.is_admin(user_id):
             logger.info(f"Admin {user_id} executed /off in chat {chat_id}")
             auth_system.set_gratis_mode(False)
             await update.message.reply_text("✅ Modo OFF activado: Solo usuarios autorizados.")
         else:
-            # Non-admins must be in ALLOWED_GROUP
             if chat_id != ALLOWED_GROUP:
                 logger.warning(f"Non-admin {user_id} tried /off in unauthorized chat {chat_id}")
                 await update.message.reply_text("🚫 Este comando solo puede usarse en el grupo autorizado.")
@@ -269,7 +260,6 @@ async def agregar_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     chat_id = update.effective_chat.id
     
     try:
-        # Allow admin to use command in any chat
         if user_id == ADMIN_ID or auth_system.is_admin(user_id):
             logger.info(f"Admin {user_id} executed /agregar in chat {chat_id}")
             if not context.args:
@@ -294,7 +284,6 @@ async def eliminar_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     chat_id = update.effective_chat.id
     
     try:
-        # Allow admin to use command in any chat
         if user_id == ADMIN_ID or auth_system.is_admin(user_id):
             logger.info(f"Admin {user_id} executed /eliminar in chat {chat_id}")
             if not context.args:
@@ -321,7 +310,6 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     chat_id = update.effective_chat.id
     
     try:
-        # Allow admin to use command in any chat
         if user_id == ADMIN_ID or auth_system.is_admin(user_id):
             logger.info(f"Admin {user_id} executed /stats in chat {chat_id}")
             stats = auth_system.get_stats()
@@ -350,18 +338,14 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 def main() -> None:
     try:
-        # Log admin ID and group ID for debugging
         logger.info(f"Initializing bot with admin ID: {ADMIN_ID}, allowed group: {ALLOWED_GROUP}")
         
-        # Validate token format
         if not BOT_TOKEN or ":" not in BOT_TOKEN:
             logger.error("Invalid bot token provided")
             raise ValueError("Invalid bot token")
 
-        # Initialize application
         app = Application.builder().token(BOT_TOKEN).build()
 
-        # Register handlers
         app.add_handler(CommandHandler("start", start))
         app.add_handler(CommandHandler("gratis", gratis_command))
         app.add_handler(CommandHandler("off", off_command))
@@ -372,10 +356,18 @@ def main() -> None:
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
         logger.info("Bot handlers registered successfully")
-        logger.info("Starting bot polling...")
-
-        # Start polling
-        app.run_polling(allowed_updates=Update.ALL_TYPES)
+        
+        # USAR WEBHOOKS EN LUGAR DE POLLING (obligatorio para Render)
+        port = int(os.environ.get("PORT", 10000))
+        webhook_url = os.environ.get("WEBHOOK_URL", f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME', 'localhost')}:{port}")
+        
+        logger.info(f"Setting up webhook at {webhook_url}")
+        app.run_webhook(
+            listen="0.0.0.0",
+            port=port,
+            webhook_url=webhook_url,
+            allowed_updates=Update.ALL_TYPES
+        )
     
     except Exception as e:
         logger.error(f"Fatal error in main: {str(e)}")

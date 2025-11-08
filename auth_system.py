@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Dict, List, Set, Optional  # ← Agregado Optional
+from typing import Dict, List, Set, Optional
 
 class AuthSystem:
     def __init__(self, admin_id: int, allowed_group: int):
@@ -42,7 +42,7 @@ class AuthSystem:
         return user_id in self.authorized_users
     
 
-    def can_use_bot(self, user_id: int, chat_id: int, is_private: Optional[bool] = None) -> bool:  # ← Corregido
+    def can_use_bot(self, user_id: int, chat_id: int, is_private: Optional[bool] = None) -> bool:
         """Compat: si no se pasa `is_private`, lo inferimos por el id del chat (>0 privado)."""
         user_id = int(user_id)
         chat_id = int(chat_id)

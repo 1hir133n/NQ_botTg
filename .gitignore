@@ -1,0 +1,10 @@
+# Archivos generados automáticamente
+__pycache__/
+*.pyc
+gen_*.png
+
+# Archivos sensibles
+auth_data.json
+
+# Sistema
+.DS_Store
