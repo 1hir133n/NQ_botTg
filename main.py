@@ -357,15 +357,15 @@ def main() -> None:
 
         logger.info("Bot handlers registered successfully")
         
-        # USAR WEBHOOKS EN LUGAR DE POLLING (obligatorio para Render)
+        # CORRECCIÓN PARA RENDER.COM: webhook URL SIN puerto
         port = int(os.environ.get("PORT", 10000))
-        webhook_url = os.environ.get("WEBHOOK_URL", f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME', 'localhost')}:{port}")
+        webhook_url = f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME')}"
         
         logger.info(f"Setting up webhook at {webhook_url}")
         app.run_webhook(
             listen="0.0.0.0",
             port=port,
-            webhook_url=webhook_url,
+            webhook_url=webhook_url,  # ← ¡SIN puerto en la URL!
             allowed_updates=Update.ALL_TYPES
         )
     
