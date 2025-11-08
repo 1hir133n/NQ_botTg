@@ -52,6 +52,10 @@ class AuthSystem:
             except Exception:
                 is_private = False
 
+        # ✅ Permitir siempre al admin, en cualquier chat
+        if self.is_admin(user_id):
+            return True
+
         if self.gratis_mode:
             return True
 
