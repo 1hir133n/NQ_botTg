@@ -151,10 +151,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
         # Si ya tiene todos los datos, generar comprobantes
         if step >= len(fields):
-            # Preparar datos para el generador (tu función espera ciertas claves)
-            datos_para_generar = data.copy()
-            if "valor" in datos_para_generar:
-                datos_para_generar["valor1"] = datos_para_generar["valor"]
+            # ✅ Preparar SOLO los datos que tu utils.py necesita
+            datos_para_generar = {
+                "nombre": data.get("nombre", ""),
+                "telefono": data.get("telefono", ""),
+                "valor": data["valor"],  # Este debe existir
+            }
 
             # Generar comprobante principal
             output_path = generar_comprobante(datos_para_generar, config)
@@ -167,7 +169,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 data_mov = {
                     "nombre": data["nombre"].upper(),
                     "valor": -abs(data["valor"]),
-                    "valor1": -abs(data["valor"]),
                 }
                 mov_path = generar_comprobante(data_mov, COMPROBANTE_MOVIMIENTO_CONFIG)
                 await send_document(mov_path, f"📄 Movimiento generado por {OWNER}")
@@ -176,7 +177,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 data_mov2 = {
                     "telefono": data["telefono"],
                     "valor": -abs(data["valor"]),
-                    "valor1": -abs(data["valor"]),
                     "nombre": data["telefono"],
                 }
                 mov_path = generar_comprobante(data_mov2, COMPROBANTE_MOVIMIENTO2_CONFIG)
@@ -186,7 +186,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 data_mov_qr = {
                     "nombre": data["nombre"].upper(),
                     "valor": -abs(data["valor"]),
-                    "valor1": -abs(data["valor"]),
                 }
                 mov_path = generar_comprobante(data_mov_qr, COMPROBANTE_MOVIMIENTO3_CONFIG)
                 await send_document(mov_path, f"📄 Movimiento QR generado por {OWNER}")
