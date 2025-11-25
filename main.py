@@ -107,6 +107,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     chat_id = update.effective_chat.id
     text = update.message.text.strip()
 
+    logger.info(f"📥 Mensaje recibido de {user_id}: '{text}'")
+
     try:
         if not auth_system.can_use_bot(user_id, chat_id):
             await update.message.reply_text("🚫 Acceso denegado: No tienes permiso para usar este bot.")
@@ -114,13 +116,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
         if user_id not in user_data_store:
             await update.message.reply_text("🔄 Por favor, inicia con /start")
+            logger.warning(f"Usuario {user_id} no tiene sesión activa.")
             return
 
         data = user_data_store[user_id]
         tipo = data["tipo"]
         step = data.get("step", 0)
+        logger.info(f"📊 Usuario {user_id}: tipo={tipo}, step={step}, datos actuales={data}")
 
-        # Mapeo de tipo a configuración
         config_map = {
             "comprobante1": COMPROBANTE1_CONFIG,
             "comprobante4": COMPROBANTE4_CONFIG,
@@ -133,11 +136,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             return
 
         fields = config["fields"]
+        logger.info(f"📋 Campos esperados: {fields}")
 
         async def send_document(output_path: str, caption: str) -> bool:
             try:
                 if not os.path.exists(output_path):
-                    logger.error(f"Document not found: {output_path}")
+                    logger.error(f"❌ Archivo no encontrado: {output_path}")
                     await update.message.reply_text("⚠️ Error: No se pudo generar el comprobante.")
                     return False
                 with open(output_path, "rb") as f:
@@ -145,58 +149,65 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 os.remove(output_path)
                 return True
             except Exception as e:
-                logger.error(f"Error sending document: {str(e)}")
+                logger.error(f"📤 Error al enviar documento: {e}")
                 await update.message.reply_text("⚠️ Error al enviar el comprobante.")
                 return False
 
-        # Si ya tiene todos los datos, generar comprobantes
+        # ¿Ya completó todos los campos?
         if step >= len(fields):
-            # ✅ Preparar SOLO los datos que tu utils.py necesita
-            datos_para_generar = {
-                "nombre": data.get("nombre", ""),
-                "telefono": data.get("telefono", ""),
-                "valor": data["valor"],  # Este debe existir
-            }
+            logger.info(f"✅ Usuario {user_id} completó todos los campos. Preparando datos para generar...")
 
-            # Generar comprobante principal
-            output_path = generar_comprobante(datos_para_generar, config)
-            if not await send_document(output_path, f"✅ Comprobante generado por {OWNER}"):
+            # Verificar que 'valor' existe
+            if "valor" not in data:
+                logger.error(f"❌ 'valor' no encontrado en los datos de {user_id}")
+                await update.message.reply_text("⚠️ Error interno: valor no registrado.")
                 del user_data_store[user_id]
                 return
 
-            # Generar movimiento asociado (si aplica)
-            if tipo == "comprobante1":
-                data_mov = {
-                    "nombre": data["nombre"].upper(),
-                    "valor": -abs(data["valor"]),
-                }
-                mov_path = generar_comprobante(data_mov, COMPROBANTE_MOVIMIENTO_CONFIG)
-                await send_document(mov_path, f"📄 Movimiento generado por {OWNER}")
+            datos_para_generar = {
+                "nombre": data.get("nombre", ""),
+                "telefono": data.get("telefono", ""),
+                "valor": data["valor"],
+            }
+            logger.info(f"📩 Datos enviados a generar_comprobante: {datos_para_generar}")
 
-            elif tipo == "comprobante4":
-                data_mov2 = {
-                    "telefono": data["telefono"],
-                    "valor": -abs(data["valor"]),
-                    "nombre": data["telefono"],
-                }
-                mov_path = generar_comprobante(data_mov2, COMPROBANTE_MOVIMIENTO2_CONFIG)
-                await send_document(mov_path, f"📄 Movimiento generado por {OWNER}")
+            try:
+                output_path = generar_comprobante(datos_para_generar, config)
+                logger.info(f"🖼️ Comprobante generado en: {output_path}")
+            except Exception as e:
+                logger.exception(f"💥 Error FATAL en generar_comprobante: {e}")
+                await update.message.reply_text(
+                    "⚠️ Error al generar la imagen. Posibles causas:\n"
+                    "- Falta una fuente o plantilla\n"
+                    "- Problema con Pillow (PIL)\n"
+                    "- Error en el formato de datos"
+                )
+                del user_data_store[user_id]
+                return
 
-            elif tipo == "comprobante_qr":
-                data_mov_qr = {
-                    "nombre": data["nombre"].upper(),
-                    "valor": -abs(data["valor"]),
-                }
-                mov_path = generar_comprobante(data_mov_qr, COMPROBANTE_MOVIMIENTO3_CONFIG)
-                await send_document(mov_path, f"📄 Movimiento QR generado por {OWNER}")
+            if await send_document(output_path, f"✅ Comprobante generado por {OWNER}"):
+                # Movimientos...
+                if tipo == "comprobante1":
+                    data_mov = {"nombre": data["nombre"].upper(), "valor": -abs(data["valor"])}
+                    mov_path = generar_comprobante(data_mov, COMPROBANTE_MOVIMIENTO_CONFIG)
+                    await send_document(mov_path, f"📄 Movimiento generado por {OWNER}")
+                elif tipo == "comprobante4":
+                    data_mov2 = {"telefono": data["telefono"], "valor": -abs(data["valor"]), "nombre": data["telefono"]}
+                    mov_path = generar_comprobante(data_mov2, COMPROBANTE_MOVIMIENTO2_CONFIG)
+                    await send_document(mov_path, f"📄 Movimiento generado por {OWNER}")
+                elif tipo == "comprobante_qr":
+                    data_mov_qr = {"nombre": data["nombre"].upper(), "valor": -abs(data["valor"])}
+                    mov_path = generar_comprobante(data_mov_qr, COMPROBANTE_MOVIMIENTO3_CONFIG)
+                    await send_document(mov_path, f"📄 Movimiento QR generado por {OWNER}")
 
             del user_data_store[user_id]
+            logger.info(f"🧹 Sesión de {user_id} finalizada.")
             return
 
-        # Procesar el campo actual
+        # Procesar campo actual
         current_field = fields[step]
+        logger.info(f"📝 Procesando campo '{current_field}' con valor: '{text}'")
 
-        # Validaciones por tipo de campo
         if current_field == "telefono":
             if not text.isdigit():
                 await update.message.reply_text("⚠️ El número debe contener solo dígitos.")
@@ -209,13 +220,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 return
             data["valor"] = int(text)
 
-        else:  # nombre, negocio, etc.
+        else:
             data[current_field] = text
 
-        # Avanzar al siguiente paso
         data["step"] = step + 1
+        logger.info(f"⏭️ Nuevo estado de {user_id}: {data}")
 
-        # Si hay más campos, pedir el siguiente
         if data["step"] < len(fields):
             next_field = fields[data["step"]]
             prompts = {
@@ -223,12 +233,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 "telefono": "📱 Ingresa el número de teléfono:",
                 "valor": "💰 Ingresa el valor:",
             }
-            await update.message.reply_text(prompts.get(next_field, f"Ingrese {next_field}:"))
-        # Si no, el siguiente mensaje disparará la generación
+            msg = prompts.get(next_field, f"Ingrese {next_field}:")
+            await update.message.reply_text(msg)
+        # else: se generará en el próximo mensaje
 
     except Exception as e:
-        logger.error(f"Error in handle_message for user {user_id} in chat {chat_id}: {str(e)}")
-        await update.message.reply_text("⚠️ Error al procesar los datos. Intenta de nuevo.")
+        logger.exception(f"🔥 Excepción no controlada en handle_message (user {user_id}): {e}")
+        await update.message.reply_text("⚠️ Error crítico. El administrador ha sido notificado.")
 
 # Admin Commands
 async def gratis_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
