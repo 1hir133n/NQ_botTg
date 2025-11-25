@@ -14,6 +14,34 @@ import os
 import logging
 from uuid import uuid4
 
+# === HEALTH CHECK PARA RENDER ===
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import threading
+
+def run_health_check():
+    """Servidor HTTP simple para responder a / con 200 OK"""
+    class HealthHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            if self.path == "/":
+                self.send_response(200)
+                self.send_header("Content-type", "text/plain")
+                self.end_headers()
+                self.wfile.write(b"OK")
+            else:
+                self.send_response(404)
+                self.end_headers()
+        def log_message(self, format, *args):
+            return  # Silenciar logs del health check
+
+    # Render espera el health check en el puerto 8080
+    server = HTTPServer(("0.0.0.0", 8080), HealthHandler)
+    server.serve_forever()
+
+# Iniciar health check en segundo plano
+health_thread = threading.Thread(target=run_health_check, daemon=True)
+health_thread.start()
+# === FIN HEALTH CHECK ===
+
 # Setup logging
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
