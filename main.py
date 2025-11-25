@@ -54,7 +54,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             f"🎉 Bienvenido al Generador de Comprobantes\n"
             f"💎 Servicio gratuito de alta calidad\n"
             f"⚠️ Si pagaste por esto, contacta a {OWNER}\n"
-            f"Selecciona una opción:"
+            f"Selecciona una opción: (v3)"
         )
         
         await update.message.reply_text(welcome_message, reply_markup=reply_markup)
