@@ -1,6 +1,9 @@
+# config.py
+
 COMPROBANTE1_CONFIG = {
     "template": "img/plantilla1.jpg",
     "output": "comprobante1_generado.png",
+    "fields": ["nombre", "telefono", "valor"],
     "styles": {
         "nombre": {"size": 22, "color": "#200021", "pos": (48, 600)},
         "telefono": {"size": 22, "color": "#200021", "pos": (48, 765)},
@@ -15,6 +18,7 @@ COMPROBANTE1_CONFIG = {
 COMPROBANTE4_CONFIG = {
     "template": "img/plantilla4.jpg",
     "output": "comprobante4_generado.png",
+    "fields": ["telefono", "valor"],
     "styles": {
         "telefono": {"size": 22, "color": "#200021", "pos": (47, 262)},
         "valor1": {"size": 22, "color": "#200021", "pos": (47, 342)},
@@ -50,6 +54,7 @@ COMPROBANTE_MOVIMIENTO2_CONFIG = {
 COMPROBANTE_QR_CONFIG = {
     "template": "img/plantilla_qr.jpg",
     "output": "comprobante_qr_generado.png",
+    "fields": ["nombre", "valor"],
     "styles": {
         "nombre": {"size": 75, "color": "#2e2b33", "pos": (230, 1662)},
         "valor1": {"size": 75, "color": "#2e2b33", "pos": (230, 1960)},
@@ -57,9 +62,8 @@ COMPROBANTE_QR_CONFIG = {
         "referencia": {"size": 75, "color": "#2e2b33", "pos": (230, 2562)},
         "disponible": {"size": 75, "color": "#2e2b33", "pos": (230, 2862)},
     },
-        "font": "fuentes/Manrope-Medium.ttf",
+    "font": "fuentes/Manrope-Medium.ttf",
 }
-
 
 COMPROBANTE_MOVIMIENTO3_CONFIG = {
     "template": "img/comprobante_movimiento3.jpg",

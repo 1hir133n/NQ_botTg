@@ -78,15 +78,25 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
         user_data_store[user_id] = {"step": 0, "tipo": tipo, "session_id": str(uuid4())}
 
-        prompts = {
-            "comprobante1": "👤 Ingresa el nombre completo:",
-            "comprobante4": "📱 Ingresa el número de teléfono:",
-            "comprobante_qr": "🏬 Nombre del negocio:",
+        # Pedir el primer campo según la plantilla
+        config_map = {
+            "comprobante1": COMPROBANTE1_CONFIG,
+            "comprobante4": COMPROBANTE4_CONFIG,
+            "comprobante_qr": COMPROBANTE_QR_CONFIG,
         }
+        config = config_map.get(tipo)
+        if config and "fields" in config:
+            first_field = config["fields"][0]
+            prompts = {
+                "nombre": "👤 Ingresa el nombre completo:",
+                "telefono": "📱 Ingresa el número de teléfono:",
+                "valor": "💰 Ingresa el valor:",
+            }
+            initial_prompt = prompts.get(first_field, f"Ingrese {first_field}:")
+        else:
+            initial_prompt = "🔍 Por favor, inicia ingresando los datos requeridos:"
 
-        await query.message.reply_text(
-            prompts.get(tipo, "🔍 Por favor, inicia ingresando los datos requeridos:")
-        )
+        await query.message.reply_text(initial_prompt)
     
     except Exception as e:
         logger.error(f"Error in button_handler for user {user_id} in chat {chat_id}: {str(e)}")
@@ -108,7 +118,21 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
         data = user_data_store[user_id]
         tipo = data["tipo"]
-        step = data["step"]
+        step = data.get("step", 0)
+
+        # Mapeo de tipo a configuración
+        config_map = {
+            "comprobante1": COMPROBANTE1_CONFIG,
+            "comprobante4": COMPROBANTE4_CONFIG,
+            "comprobante_qr": COMPROBANTE_QR_CONFIG,
+        }
+
+        config = config_map.get(tipo)
+        if not config or "fields" not in config:
+            await update.message.reply_text("⚠️ Tipo de comprobante no soportado.")
+            return
+
+        fields = config["fields"]
 
         async def send_document(output_path: str, caption: str) -> bool:
             try:
@@ -125,84 +149,83 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 await update.message.reply_text("⚠️ Error al enviar el comprobante.")
                 return False
 
-        # --- NEQUI ---
-        if tipo == "comprobante1":
-            if step == 0:
-                data["nombre"] = text
-                data["step"] = 1
-                await update.message.reply_text("📱 Ingresa el número de teléfono (solo dígitos):")
-            elif step == 1:
-                if not text.isdigit():
-                    await update.message.reply_text("⚠️ El número debe contener solo dígitos.")
-                    return
-                data["telefono"] = text
-                data["step"] = 2
-                await update.message.reply_text("💰 Ingresa el valor:")
-            elif step == 2:
-                if not text.replace("-", "", 1).isdigit():
-                    await update.message.reply_text("⚠️ El valor debe ser numérico.")
-                    return
-                data["valor"] = int(text)
-                
-                output_path = generar_comprobante(data, COMPROBANTE1_CONFIG)
-                if await send_document(output_path, f"✅ Comprobante Nequi generado por {OWNER}"):
-                    data_mov = data.copy()
-                    data_mov["nombre"] = data["nombre"].upper()
-                    data_mov["valor"] = -abs(data["valor"])
-                    output_path_mov = generar_comprobante(data_mov, COMPROBANTE_MOVIMIENTO_CONFIG)
-                    await send_document(output_path_mov, f"📄 Movimiento generado por {OWNER}")
+        # Si ya tiene todos los datos, generar comprobantes
+        if step >= len(fields):
+            # Preparar datos para el generador (tu función espera ciertas claves)
+            datos_para_generar = data.copy()
+            if "valor" in datos_para_generar:
+                datos_para_generar["valor1"] = datos_para_generar["valor"]
 
+            # Generar comprobante principal
+            output_path = generar_comprobante(datos_para_generar, config)
+            if not await send_document(output_path, f"✅ Comprobante generado por {OWNER}"):
                 del user_data_store[user_id]
+                return
 
-        # --- TRANSFIYA ---
-        elif tipo == "comprobante4":
-            if step == 0:
-                if not text.isdigit():
-                    await update.message.reply_text("⚠️ El número debe contener solo dígitos.")
-                    return
-                data["telefono"] = text
-                data["step"] = 1
-                await update.message.reply_text("💰 Ingresa el valor:")
-            elif step == 1:
-                if not text.replace("-", "", 1).isdigit():
-                    await update.message.reply_text("⚠️ El valor debe ser numérico.")
-                    return
-                data["valor"] = int(text)
-                
-                output_path = generar_comprobante(data, COMPROBANTE4_CONFIG)
-                if await send_document(output_path, f"✅ Comprobante Transfiya generado por {OWNER}"):
-                    data_mov2 = {
-                        "telefono": data["telefono"],
-                        "valor": -abs(data["valor"]),
-                        "nombre": data["telefono"],
-                    }
-                    output_path_mov2 = generar_comprobante(data_mov2, COMPROBANTE_MOVIMIENTO2_CONFIG)
-                    await send_document(output_path_mov2, f"📄 Movimiento generado por {OWNER}")
+            # Generar movimiento asociado (si aplica)
+            if tipo == "comprobante1":
+                data_mov = {
+                    "nombre": data["nombre"].upper(),
+                    "valor": -abs(data["valor"]),
+                    "valor1": -abs(data["valor"]),
+                }
+                mov_path = generar_comprobante(data_mov, COMPROBANTE_MOVIMIENTO_CONFIG)
+                await send_document(mov_path, f"📄 Movimiento generado por {OWNER}")
 
-                del user_data_store[user_id]
+            elif tipo == "comprobante4":
+                data_mov2 = {
+                    "telefono": data["telefono"],
+                    "valor": -abs(data["valor"]),
+                    "valor1": -abs(data["valor"]),
+                    "nombre": data["telefono"],
+                }
+                mov_path = generar_comprobante(data_mov2, COMPROBANTE_MOVIMIENTO2_CONFIG)
+                await send_document(mov_path, f"📄 Movimiento generado por {OWNER}")
 
-        # --- QR COMPROBANTE ---
-        elif tipo == "comprobante_qr":
-            if step == 0:
-                data["nombre"] = text
-                data["step"] = 1
-                await update.message.reply_text("💰 Ingresa el valor:")
-            elif step == 1:
-                if not text.replace("-", "", 1).isdigit():
-                    await update.message.reply_text("⚠️ El valor debe ser numérico.")
-                    return
-                data["valor"] = int(text)
+            elif tipo == "comprobante_qr":
+                data_mov_qr = {
+                    "nombre": data["nombre"].upper(),
+                    "valor": -abs(data["valor"]),
+                    "valor1": -abs(data["valor"]),
+                }
+                mov_path = generar_comprobante(data_mov_qr, COMPROBANTE_MOVIMIENTO3_CONFIG)
+                await send_document(mov_path, f"📄 Movimiento QR generado por {OWNER}")
 
-                output_path = generar_comprobante(data, COMPROBANTE_QR_CONFIG)
-                if await send_document(output_path, f"✅ Comprobante QR generado por {OWNER}"):
-                    data_mov_qr = {
-                        "nombre": data["nombre"].upper(),
-                        "valor": -abs(data["valor"])
-                    }
-                    output_path_movqr = generar_comprobante(data_mov_qr, COMPROBANTE_MOVIMIENTO3_CONFIG)
-                    await send_document(output_path_movqr, f"📄 Movimiento QR generado por {OWNER}")
+            del user_data_store[user_id]
+            return
 
-                del user_data_store[user_id]
+        # Procesar el campo actual
+        current_field = fields[step]
+
+        # Validaciones por tipo de campo
+        if current_field == "telefono":
+            if not text.isdigit():
+                await update.message.reply_text("⚠️ El número debe contener solo dígitos.")
+                return
+            data["telefono"] = text
+
+        elif current_field == "valor":
+            if not text.lstrip("-").isdigit():
+                await update.message.reply_text("⚠️ El valor debe ser numérico.")
+                return
+            data["valor"] = int(text)
+
+        else:  # nombre, negocio, etc.
+            data[current_field] = text
+
+        # Avanzar al siguiente paso
+        data["step"] = step + 1
+
+        # Si hay más campos, pedir el siguiente
+        if data["step"] < len(fields):
+            next_field = fields[data["step"]]
+            prompts = {
+                "nombre": "👤 Ingresa el nombre completo:",
+                "telefono": "📱 Ingresa el número de teléfono:",
+                "valor": "💰 Ingresa el valor:",
+            }
+            await update.message.reply_text(prompts.get(next_field, f"Ingrese {next_field}:"))
+        # Si no, el siguiente mensaje disparará la generación
 
     except Exception as e:
         logger.error(f"Error in handle_message for user {user_id} in chat {chat_id}: {str(e)}")
