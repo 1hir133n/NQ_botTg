@@ -2,6 +2,7 @@ from PIL import Image, ImageDraw, ImageFont
 from datetime import datetime
 import uuid
 import random
+import os  # ← Importante para verificar rutas
 
 # --- IMPORTACIÓN SEGURA DE PYTZ ---
 try:
@@ -10,7 +11,7 @@ try:
 except ImportError:
     BOGOTA_TZ = None
 
-# --- FUNCIÓN AUXILIAR: OBTENER FECHA EN ESPAÑOL (con fallback) ---
+# --- FUNCIÓN AUXILIAR: OBTENER FECHA EN ESPAÑOL ---
 def obtener_fecha_es():
     meses_es = {
         "january": "enero", "february": "febrero", "march": "marzo", "april": "abril",
@@ -27,7 +28,6 @@ def obtener_fecha_es():
         fecha = now.strftime(f"%d de {mes} de %Y a las %I:%M %p").lower().replace("am", "a. m.").replace("pm", "p. m.")
         return fecha
     except:
-        # Fallback universal
         return datetime.utcnow().strftime("%d/%m/%Y %I:%M %p")
 
 def draw_text_with_outline(draw, position, text, font, fill, outline_fill="white", outline_width=2):
@@ -89,8 +89,7 @@ def dibujar_valor_movimiento(draw, base_style, valor, font_path, ancho_imagen, d
 
         draw_text_with_outline(draw, (x_entero, pos_y), entero, font_entero, base_style["color"], "white", 2)
         draw.text((x_decimal, decimal_y), decimal, font=font_decimal, fill=decimal_style.get("color", base_style["color"]) if decimal_style else base_style["color"])
-    except Exception as e:
-        # Dibuja valor simple si falla
+    except Exception:
         fallback_font = ImageFont.load_default()
         draw.text((base_style["pos"][0], base_style["pos"][1]), str(valor), font=fallback_font, fill=base_style["color"])
 
@@ -99,21 +98,23 @@ def generar_comprobante(data, config):
     font_path = config["font"]
     styles = config["styles"]
 
-    # Verificar plantilla
-    try:
-        image = Image.open(template_path).convert("RGB")
-    except Exception as e:
-        raise FileNotFoundError(f"Plantilla no encontrada: {template_path}")
+    # ✅ VERIFICACIÓN CRÍTICA: ¿EXISTEN LOS ARCHIVOS?
+    if not os.path.exists(template_path):
+        raise FileNotFoundError(f"❌ PLANTILLA NO ENCONTRADA: {template_path}")
+    if not os.path.exists(font_path):
+        raise FileNotFoundError(f"❌ FUENTE NO ENCONTRADA: {font_path}")
 
+    # Cargar imagen
+    image = Image.open(template_path).convert("RGB")
     draw = ImageDraw.Draw(image)
 
-    # Detectar si es movimiento
+    # Detectar tipo
     tipo_movimiento = "valor1" in styles and "nombre" in styles and "valor_decimal" in styles
     es_comprobante_qr = config.get("output", "").endswith("comprobante_qr_generado.png")
     es_comprobante4 = config.get("output", "").endswith("comprobante4_generado.png")
 
     if tipo_movimiento:
-        # === MOVIMIENTO ===
+        # --- MOVIMIENTO ---
         decimal_style = styles.get("valor_decimal")
         dibujar_valor_movimiento(draw, styles["valor1"], data["valor"], font_path, image.width, decimal_style)
         try:
@@ -123,7 +124,7 @@ def generar_comprobante(data, config):
             fallback_font = ImageFont.load_default()
             draw.text(styles["nombre"]["pos"], data["nombre"], font=fallback_font, fill=styles["nombre"]["color"])
     else:
-        # === COMPROBANTE NORMAL ===
+        # --- COMPROBANTE NORMAL ---
         fecha = obtener_fecha_es()
         valor = data["valor"]
         valor_formateado = "$ {:,.2f}".format(valor).replace(",", "X").replace(".", ",").replace("X", ".")
@@ -165,7 +166,7 @@ def generar_comprobante(data, config):
                 else:
                     draw_text_with_outline(draw, style["pos"], str(texto), font, style["color"])
 
-    # Guardar
+    # Guardar y devolver
     output_path = f"gen_{uuid.uuid4().hex}.png"
     image.save(output_path)
     return output_path
