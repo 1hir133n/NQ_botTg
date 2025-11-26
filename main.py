@@ -1,5 +1,5 @@
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaDocument  # ← InputMediaDocument añadido
 from config import (
     COMPROBANTE1_CONFIG,
     COMPROBANTE4_CONFIG,
@@ -141,8 +141,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     with open(output_path, "rb") as f1, open(output_path_mov, "rb") as f2:
                         await update.message.reply_media_group(
                             media=[
-                                {"type": "document", "media": f1},
-                                {"type": "document", "media": f2}
+                                InputMediaDocument(f1),
+                                InputMediaDocument(f2)
                             ]
                         )
                     await update.message.reply_text(f"✅ Comprobante y Movimiento generado por {user_name}")
@@ -180,8 +180,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     with open(output_path, "rb") as f1, open(output_path_mov2, "rb") as f2:
                         await update.message.reply_media_group(
                             media=[
-                                {"type": "document", "media": f1},
-                                {"type": "document", "media": f2}
+                                InputMediaDocument(f1),
+                                InputMediaDocument(f2)
                             ]
                         )
                     await update.message.reply_text(f"✅ Comprobante y Movimiento generado por {user_name}")
@@ -216,8 +216,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     with open(output_path, "rb") as f1, open(output_path_movqr, "rb") as f2:
                         await update.message.reply_media_group(
                             media=[
-                                {"type": "document", "media": f1},
-                                {"type": "document", "media": f2}
+                                InputMediaDocument(f1),
+                                InputMediaDocument(f2)
                             ]
                         )
                     await update.message.reply_text(f"✅ Comprobante y Movimiento generado por {user_name}")
