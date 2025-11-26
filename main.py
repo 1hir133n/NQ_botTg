@@ -145,7 +145,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 data["valor"] = int(text)
                 
                 output_path = generar_comprobante(data, COMPROBANTE1_CONFIG)
-                if await send_document(output_path, f"✅ Comprobante Nequi generado por {OWNER}"):
+               if await send_document(output_path, f"✅ Comprobante Nequi generado por {update.effective_user.first_name}"):
                     data_mov = data.copy()
                     data_mov["nombre"] = data["nombre"].upper()
                     data_mov["valor"] = -abs(data["valor"])
@@ -170,7 +170,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 data["valor"] = int(text)
                 
                 output_path = generar_comprobante(data, COMPROBANTE4_CONFIG)
-                if await send_document(output_path, f"✅ Comprobante Transfiya generado por {OWNER}"):
+                if await send_document(output_path, f"✅ Comprobante Transfiya generado por {update.effective_user.first_name}"):
                     data_mov2 = {
                         "telefono": data["telefono"],
                         "valor": -abs(data["valor"]),
@@ -194,8 +194,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 data["valor"] = int(text)
 
                 output_path = generar_comprobante(data, COMPROBANTE_QR_CONFIG)
-                if await send_document(output_path, f"✅ Comprobante QR generado por {OWNER}"):
-                    data_mov_qr = {
+                if await send_document(output_path, f"✅ Comprobante QR generado por {update.effective_user.first_name}"):
                         "nombre": data["nombre"].upper(),
                         "valor": -abs(data["valor"])
                     }
