@@ -111,22 +111,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         tipo = data["tipo"]
         step = data["step"]
 
-        async def send_document(output_path: str, caption: str, user_name: str = "Usuario") -> bool:
-            try:
-                if not os.path.exists(output_path):
-                    logger.error(f"Document not found: {output_path}")
-                    await update.message.reply_text("⚠️ Error: No se pudo generar el comprobante.")
-                    return False
-                with open(output_path, "rb") as f:
-                    final_caption = caption.format(user_name=user_name)
-                    await update.message.reply_document(document=f, caption=final_caption)
-                os.remove(output_path)
-                return True
-            except Exception as e:
-                logger.error(f"Error sending document: {str(e)}")
-                await update.message.reply_text("⚠️ Error al enviar el comprobante.")
-                return False
-
         # --- NEQUI ---
         if tipo == "comprobante1":
             if step == 0:
@@ -145,15 +129,31 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     await update.message.reply_text("⚠️ El valor debe ser numérico.")
                     return
                 data["valor"] = int(text)
-                
-                output_path = generar_comprobante(data, COMPROBANTE1_CONFIG)
-                if await send_document(output_path, "✅ Comprobante Nequi generado por {user_name}", user_name):
-                    data_mov = data.copy()
-                    data_mov["nombre"] = data["nombre"].upper()
-                    data_mov["valor"] = -abs(data["valor"])
-                    output_path_mov = generar_comprobante(data_mov, COMPROBANTE_MOVIMIENTO_CONFIG)
-                    await send_document(output_path_mov, f"📄 Movimiento generado por {OWNER}", user_name)
 
+                # Generar comprobante y movimiento
+                output_path = generar_comprobante(data, COMPROBANTE1_CONFIG)
+                data_mov = {
+                    "nombre": data["nombre"].upper(),
+                    "valor": -abs(data["valor"])
+                }
+                output_path_mov = generar_comprobante(data_mov, COMPROBANTE_MOVIMIENTO_CONFIG)
+
+                # Enviar ambos archivos + mensaje unificado
+                caption = f"✅ Comprobante y Movimiento generado por {user_name}"
+                try:
+                    with open(output_path, "rb") as f1, open(output_path_mov, "rb") as f2:
+                        await update.message.reply_media_group(
+                            media=[
+                                {"type": "document", "media": f1},
+                                {"type": "document", "media": f2}
+                            ]
+                        )
+                    await update.message.reply_text(caption)
+                    os.remove(output_path)
+                    os.remove(output_path_mov)
+                except Exception as e:
+                    logger.error(f"Error al enviar comprobantes Nequi: {e}")
+                    await update.message.reply_text("⚠️ Error al enviar los comprobantes.")
                 del user_data_store[user_id]
 
         # --- TRANSFIYA ---
@@ -170,17 +170,30 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     await update.message.reply_text("⚠️ El valor debe ser numérico.")
                     return
                 data["valor"] = int(text)
-                
-                output_path = generar_comprobante(data, COMPROBANTE4_CONFIG)
-                if await send_document(output_path, "✅ Comprobante Transfiya generado por {user_name}", user_name):
-                    data_mov2 = {
-                        "telefono": data["telefono"],
-                        "valor": -abs(data["valor"]),
-                        "nombre": data["telefono"],
-                    }
-                    output_path_mov2 = generar_comprobante(data_mov2, COMPROBANTE_MOVIMIENTO2_CONFIG)
-                    await send_document(output_path_mov2, f"📄 Movimiento generado por {OWNER}", user_name)
 
+                output_path = generar_comprobante(data, COMPROBANTE4_CONFIG)
+                data_mov2 = {
+                    "telefono": data["telefono"],
+                    "valor": -abs(data["valor"]),
+                    "nombre": data["telefono"]
+                }
+                output_path_mov2 = generar_comprobante(data_mov2, COMPROBANTE_MOVIMIENTO2_CONFIG)
+
+                caption = f"✅ Comprobante y Movimiento generado por {user_name}"
+                try:
+                    with open(output_path, "rb") as f1, open(output_path_mov2, "rb") as f2:
+                        await update.message.reply_media_group(
+                            media=[
+                                {"type": "document", "media": f1},
+                                {"type": "document", "media": f2}
+                            ]
+                        )
+                    await update.message.reply_text(caption)
+                    os.remove(output_path)
+                    os.remove(output_path_mov2)
+                except Exception as e:
+                    logger.error(f"Error al enviar comprobantes Transfiya: {e}")
+                    await update.message.reply_text("⚠️ Error al enviar los comprobantes.")
                 del user_data_store[user_id]
 
         # --- QR COMPROBANTE ---
@@ -196,14 +209,27 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 data["valor"] = int(text)
 
                 output_path = generar_comprobante(data, COMPROBANTE_QR_CONFIG)
-                if await send_document(output_path, "✅ Comprobante QR generado por {user_name}", user_name):
-                    data_mov_qr = {
-                        "nombre": data["nombre"].upper(),
-                        "valor": -abs(data["valor"])
-                    }
-                    output_path_movqr = generar_comprobante(data_mov_qr, COMPROBANTE_MOVIMIENTO3_CONFIG)
-                    await send_document(output_path_movqr, f"📄 Movimiento QR generado por {OWNER}", user_name)
+                data_mov_qr = {
+                    "nombre": data["nombre"].upper(),
+                    "valor": -abs(data["valor"])
+                }
+                output_path_movqr = generar_comprobante(data_mov_qr, COMPROBANTE_MOVIMIENTO3_CONFIG)
 
+                caption = f"✅ Comprobante y Movimiento generado por {user_name}"
+                try:
+                    with open(output_path, "rb") as f1, open(output_path_movqr, "rb") as f2:
+                        await update.message.reply_media_group(
+                            media=[
+                                {"type": "document", "media": f1},
+                                {"type": "document", "media": f2}
+                            ]
+                        )
+                    await update.message.reply_text(caption)
+                    os.remove(output_path)
+                    os.remove(output_path_movqr)
+                except Exception as e:
+                    logger.error(f"Error al enviar comprobantes QR: {e}")
+                    await update.message.reply_text("⚠️ Error al enviar los comprobantes.")
                 del user_data_store[user_id]
 
     except Exception as e:
