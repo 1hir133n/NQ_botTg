@@ -1,5 +1,5 @@
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputFile  # ← InputFile añadido
 from config import (
     COMPROBANTE1_CONFIG,
     COMPROBANTE4_CONFIG,
@@ -130,30 +130,29 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     return
                 data["valor"] = int(text)
 
-                # Generar comprobante y movimiento
-                output_path = generar_comprobante(data, COMPROBANTE1_CONFIG)
-                data_mov = {
-                    "nombre": data["nombre"].upper(),
-                    "valor": -abs(data["valor"])
-                }
-                output_path_mov = generar_comprobante(data_mov, COMPROBANTE_MOVIMIENTO_CONFIG)
-
-                # Enviar ambos archivos + mensaje unificado
-                caption = f"✅ Comprobante y Movimiento generado por {user_name}"
+                output_path = None
+                output_path_mov = None
                 try:
+                    output_path = generar_comprobante(data, COMPROBANTE1_CONFIG)
+                    data_mov = {"nombre": data["nombre"].upper(), "valor": -abs(data["valor"])}
+                    output_path_mov = generar_comprobante(data_mov, COMPROBANTE_MOVIMIENTO_CONFIG)
+
                     with open(output_path, "rb") as f1, open(output_path_mov, "rb") as f2:
                         await update.message.reply_media_group(
                             media=[
-                                {"type": "document", "media": f1},
-                                {"type": "document", "media": f2}
+                                InputFile(f1, filename="Comprobante.png"),
+                                InputFile(f2, filename="Movimiento.png")
                             ]
                         )
-                    await update.message.reply_text(caption)
-                    os.remove(output_path)
-                    os.remove(output_path_mov)
+                    await update.message.reply_text(f"✅ Comprobante y Movimiento generado por {user_name}")
                 except Exception as e:
-                    logger.error(f"Error al enviar comprobantes Nequi: {e}")
-                    await update.message.reply_text("⚠️ Error al enviar los comprobantes.")
+                    logger.exception("Error en Nequi")
+                    await update.message.reply_text("❌ Error al generar los comprobantes.")
+                finally:
+                    if output_path and os.path.exists(output_path):
+                        os.remove(output_path)
+                    if output_path_mov and os.path.exists(output_path_mov):
+                        os.remove(output_path_mov)
                 del user_data_store[user_id]
 
         # --- TRANSFIYA ---
@@ -171,29 +170,29 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     return
                 data["valor"] = int(text)
 
-                output_path = generar_comprobante(data, COMPROBANTE4_CONFIG)
-                data_mov2 = {
-                    "telefono": data["telefono"],
-                    "valor": -abs(data["valor"]),
-                    "nombre": data["telefono"]
-                }
-                output_path_mov2 = generar_comprobante(data_mov2, COMPROBANTE_MOVIMIENTO2_CONFIG)
-
-                caption = f"✅ Comprobante y Movimiento generado por {user_name}"
+                output_path = None
+                output_path_mov = None
                 try:
+                    output_path = generar_comprobante(data, COMPROBANTE4_CONFIG)
+                    data_mov2 = {"telefono": data["telefono"], "valor": -abs(data["valor"]), "nombre": data["telefono"]}
+                    output_path_mov2 = generar_comprobante(data_mov2, COMPROBANTE_MOVIMIENTO2_CONFIG)
+
                     with open(output_path, "rb") as f1, open(output_path_mov2, "rb") as f2:
                         await update.message.reply_media_group(
                             media=[
-                                {"type": "document", "media": f1},
-                                {"type": "document", "media": f2}
+                                InputFile(f1, filename="Comprobante.png"),
+                                InputFile(f2, filename="Movimiento.png")
                             ]
                         )
-                    await update.message.reply_text(caption)
-                    os.remove(output_path)
-                    os.remove(output_path_mov2)
+                    await update.message.reply_text(f"✅ Comprobante y Movimiento generado por {user_name}")
                 except Exception as e:
-                    logger.error(f"Error al enviar comprobantes Transfiya: {e}")
-                    await update.message.reply_text("⚠️ Error al enviar los comprobantes.")
+                    logger.exception("Error en Transfiya")
+                    await update.message.reply_text("❌ Error al generar los comprobantes.")
+                finally:
+                    if output_path and os.path.exists(output_path):
+                        os.remove(output_path)
+                    if output_path_mov2 and os.path.exists(output_path_mov2):
+                        os.remove(output_path_mov2)
                 del user_data_store[user_id]
 
         # --- QR COMPROBANTE ---
@@ -208,35 +207,36 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     return
                 data["valor"] = int(text)
 
-                output_path = generar_comprobante(data, COMPROBANTE_QR_CONFIG)
-                data_mov_qr = {
-                    "nombre": data["nombre"].upper(),
-                    "valor": -abs(data["valor"])
-                }
-                output_path_movqr = generar_comprobante(data_mov_qr, COMPROBANTE_MOVIMIENTO3_CONFIG)
-
-                caption = f"✅ Comprobante y Movimiento generado por {user_name}"
+                output_path = None
+                output_path_mov = None
                 try:
+                    output_path = generar_comprobante(data, COMPROBANTE_QR_CONFIG)
+                    data_mov_qr = {"nombre": data["nombre"].upper(), "valor": -abs(data["valor"])}
+                    output_path_movqr = generar_comprobante(data_mov_qr, COMPROBANTE_MOVIMIENTO3_CONFIG)
+
                     with open(output_path, "rb") as f1, open(output_path_movqr, "rb") as f2:
                         await update.message.reply_media_group(
                             media=[
-                                {"type": "document", "media": f1},
-                                {"type": "document", "media": f2}
+                                InputFile(f1, filename="Comprobante.png"),
+                                InputFile(f2, filename="Movimiento.png")
                             ]
                         )
-                    await update.message.reply_text(caption)
-                    os.remove(output_path)
-                    os.remove(output_path_movqr)
+                    await update.message.reply_text(f"✅ Comprobante y Movimiento generado por {user_name}")
                 except Exception as e:
-                    logger.error(f"Error al enviar comprobantes QR: {e}")
-                    await update.message.reply_text("⚠️ Error al enviar los comprobantes.")
+                    logger.exception("Error en QR")
+                    await update.message.reply_text("❌ Error al generar los comprobantes.")
+                finally:
+                    if output_path and os.path.exists(output_path):
+                        os.remove(output_path)
+                    if output_path_movqr and os.path.exists(output_path_movqr):
+                        os.remove(output_path_movqr)
                 del user_data_store[user_id]
 
     except Exception as e:
         logger.error(f"Error in handle_message for user {user_id} in chat {chat_id}: {str(e)}")
         await update.message.reply_text("⚠️ Error al procesar los datos. Intenta de nuevo.")
 
-# Admin Commands
+# Admin Commands (sin cambios)
 async def gratis_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
