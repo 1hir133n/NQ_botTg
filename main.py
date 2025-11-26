@@ -95,6 +95,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
+    user_name = update.effective_user.first_name or "Usuario"
     text = update.message.text.strip()
 
     try:
@@ -110,14 +111,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         tipo = data["tipo"]
         step = data["step"]
 
-        async def send_document(output_path: str, caption: str) -> bool:
+        async def send_document(output_path: str, caption: str, user_name: str = "Usuario") -> bool:
             try:
                 if not os.path.exists(output_path):
                     logger.error(f"Document not found: {output_path}")
                     await update.message.reply_text("⚠️ Error: No se pudo generar el comprobante.")
                     return False
                 with open(output_path, "rb") as f:
-                    await update.message.reply_document(document=f, caption=caption)
+                    final_caption = caption.format(user_name=user_name)
+                    await update.message.reply_document(document=f, caption=final_caption)
                 os.remove(output_path)
                 return True
             except Exception as e:
@@ -145,12 +147,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 data["valor"] = int(text)
                 
                 output_path = generar_comprobante(data, COMPROBANTE1_CONFIG)
-               if await send_document(output_path, f"✅ Comprobante Nequi generado por {update.effective_user.first_name}"):
+                if await send_document(output_path, "✅ Comprobante Nequi generado por {user_name}", user_name):
                     data_mov = data.copy()
                     data_mov["nombre"] = data["nombre"].upper()
                     data_mov["valor"] = -abs(data["valor"])
                     output_path_mov = generar_comprobante(data_mov, COMPROBANTE_MOVIMIENTO_CONFIG)
-                    await send_document(output_path_mov, f"📄 Movimiento generado por {OWNER}")
+                    await send_document(output_path_mov, f"📄 Movimiento generado por {OWNER}", user_name)
 
                 del user_data_store[user_id]
 
@@ -170,14 +172,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 data["valor"] = int(text)
                 
                 output_path = generar_comprobante(data, COMPROBANTE4_CONFIG)
-                if await send_document(output_path, f"✅ Comprobante Transfiya generado por {update.effective_user.first_name}"):
+                if await send_document(output_path, "✅ Comprobante Transfiya generado por {user_name}", user_name):
                     data_mov2 = {
                         "telefono": data["telefono"],
                         "valor": -abs(data["valor"]),
                         "nombre": data["telefono"],
                     }
                     output_path_mov2 = generar_comprobante(data_mov2, COMPROBANTE_MOVIMIENTO2_CONFIG)
-                    await send_document(output_path_mov2, f"📄 Movimiento generado por {OWNER}")
+                    await send_document(output_path_mov2, f"📄 Movimiento generado por {OWNER}", user_name)
 
                 del user_data_store[user_id]
 
@@ -194,12 +196,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 data["valor"] = int(text)
 
                 output_path = generar_comprobante(data, COMPROBANTE_QR_CONFIG)
-                if await send_document(output_path, f"✅ Comprobante QR generado por {update.effective_user.first_name}"):
+                if await send_document(output_path, "✅ Comprobante QR generado por {user_name}", user_name):
+                    data_mov_qr = {
                         "nombre": data["nombre"].upper(),
                         "valor": -abs(data["valor"])
                     }
                     output_path_movqr = generar_comprobante(data_mov_qr, COMPROBANTE_MOVIMIENTO3_CONFIG)
-                    await send_document(output_path_movqr, f"📄 Movimiento QR generado por {OWNER}")
+                    await send_document(output_path_movqr, f"📄 Movimiento QR generado por {OWNER}", user_name)
 
                 del user_data_store[user_id]
 
