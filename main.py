@@ -1,5 +1,5 @@
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup  # ← InputFile eliminado
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from config import (
     COMPROBANTE1_CONFIG,
     COMPROBANTE4_CONFIG,
@@ -13,6 +13,7 @@ from auth_system import AuthSystem
 import os
 import logging
 from uuid import uuid4
+from pathlib import Path
 
 # Setup logging
 logging.basicConfig(
@@ -125,7 +126,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 data["step"] = 2
                 await update.message.reply_text("💰 Ingresa el valor:")
             elif step == 2:
-                if not text.replace("-", "", 1).isdigit():
+                if not text.lstrip("-").isdigit():
                     await update.message.reply_text("⚠️ El valor debe ser numérico.")
                     return
                 data["valor"] = int(text)
@@ -149,10 +150,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     logger.exception("Error en Nequi")
                     await update.message.reply_text("❌ Error al generar los comprobantes.")
                 finally:
-                    if output_path and os.path.exists(output_path):
-                        os.remove(output_path)
-                    if output_path_mov and os.path.exists(output_path_mov):
-                        os.remove(output_path_mov)
+                    for path in [output_path, output_path_mov]:
+                        if path and os.path.exists(path):
+                            os.remove(path)
                 del user_data_store[user_id]
 
         # --- TRANSFIYA ---
@@ -165,7 +165,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 data["step"] = 1
                 await update.message.reply_text("💰 Ingresa el valor:")
             elif step == 1:
-                if not text.replace("-", "", 1).isdigit():
+                if not text.lstrip("-").isdigit():
                     await update.message.reply_text("⚠️ El valor debe ser numérico.")
                     return
                 data["valor"] = int(text)
@@ -189,10 +189,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     logger.exception("Error en Transfiya")
                     await update.message.reply_text("❌ Error al generar los comprobantes.")
                 finally:
-                    if output_path and os.path.exists(output_path):
-                        os.remove(output_path)
-                    if output_path_mov2 and os.path.exists(output_path_mov2):
-                        os.remove(output_path_mov2)
+                    for path in [output_path, output_path_mov2]:
+                        if path and os.path.exists(path):
+                            os.remove(path)
                 del user_data_store[user_id]
 
         # --- QR COMPROBANTE ---
@@ -202,7 +201,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 data["step"] = 1
                 await update.message.reply_text("💰 Ingresa el valor:")
             elif step == 1:
-                if not text.replace("-", "", 1).isdigit():
+                if not text.lstrip("-").isdigit():
                     await update.message.reply_text("⚠️ El valor debe ser numérico.")
                     return
                 data["valor"] = int(text)
@@ -226,17 +225,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     logger.exception("Error en QR")
                     await update.message.reply_text("❌ Error al generar los comprobantes.")
                 finally:
-                    if output_path and os.path.exists(output_path):
-                        os.remove(output_path)
-                    if output_path_movqr and os.path.exists(output_path_movqr):
-                        os.remove(output_path_movqr)
+                    for path in [output_path, output_path_movqr]:
+                        if path and os.path.exists(path):
+                            os.remove(path)
                 del user_data_store[user_id]
 
     except Exception as e:
         logger.error(f"Error in handle_message for user {user_id} in chat {chat_id}: {str(e)}")
         await update.message.reply_text("⚠️ Error al procesar los datos. Intenta de nuevo.")
 
-# Admin Commands (sin cambios)
+# Admin Commands
 async def gratis_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
