@@ -1,5 +1,5 @@
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaDocument  # ← InputMediaDocument añadido
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaDocument
 from config import (
     COMPROBANTE1_CONFIG,
     COMPROBANTE4_CONFIG,
@@ -96,7 +96,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
-    user_name = update.effective_user.first_name or "Usuario"
     text = update.message.text.strip()
 
     try:
@@ -145,7 +144,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                                 InputMediaDocument(f2)
                             ]
                         )
-                    await update.message.reply_text(f"✅ Comprobante y Movimiento generado por {user_name}")
+                    # ✅ Mensaje con nombre y @
+                    user = update.effective_user
+                    user_display = user.first_name
+                    if user.username:
+                        user_display += f" (@{user.username})"
+                    await update.message.reply_text(
+                        f"✅ ¡Comprobante & Movimiento generado!\n\n🆔 Usuario: {user_display}"
+                    )
                 except Exception as e:
                     logger.exception("Error en Nequi")
                     await update.message.reply_text("❌ Error al generar los comprobantes.")
@@ -184,7 +190,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                                 InputMediaDocument(f2)
                             ]
                         )
-                    await update.message.reply_text(f"✅ Comprobante y Movimiento generado por {user_name}")
+                    user = update.effective_user
+                    user_display = user.first_name
+                    if user.username:
+                        user_display += f" (@{user.username})"
+                    await update.message.reply_text(
+                        f"✅ ¡Comprobante & Movimiento generado!\n\n🆔 Usuario: {user_display}"
+                    )
                 except Exception as e:
                     logger.exception("Error en Transfiya")
                     await update.message.reply_text("❌ Error al generar los comprobantes.")
@@ -220,7 +232,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                                 InputMediaDocument(f2)
                             ]
                         )
-                    await update.message.reply_text(f"✅ Comprobante y Movimiento generado por {user_name}")
+                    user = update.effective_user
+                    user_display = user.first_name
+                    if user.username:
+                        user_display += f" (@{user.username})"
+                    await update.message.reply_text(
+                        f"✅ ¡Comprobante & Movimiento generado!\n\n🆔 Usuario: {user_display}"
+                    )
                 except Exception as e:
                     logger.exception("Error en QR")
                     await update.message.reply_text("❌ Error al generar los comprobantes.")
