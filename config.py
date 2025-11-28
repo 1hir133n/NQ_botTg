@@ -55,15 +55,16 @@ COMPROBANTE_MOVIMIENTO2_CONFIG = {
     "font": make_abs("fuentes/Manrope-Medium.ttf"),
 }
 
+# ✅ CONFIGURACIÓN ACTUALIZADA PARA LA NUEVA PLANTILLA QR
 COMPROBANTE_QR_CONFIG = {
     "template": make_abs("img/plantilla_qr.jpg"),
     "output": make_abs("comprobante_qr_generado.png"),
     "styles": {
-        "nombre": {"size": 75, "color": "#2e2b33", "pos": (230, 1662)},
-        "valor1": {"size": 75, "color": "#2e2b33", "pos": (230, 1960)},
-        "fecha": {"size": 75, "color": "#2e2b33", "pos": (230, 2262)},
-        "referencia": {"size": 75, "color": "#2e2b33", "pos": (230, 2562)},
-        "disponible": {"size": 75, "color": "#2e2b33", "pos": (230, 2862)},
+        "nombre": {"size": 40, "color": "#2e2b33", "pos": (80, 500)},   # Para → nombre del destinatario
+        "valor1": {"size": 40, "color": "#2e2b33", "pos": (80, 600)},  # ¿Cuánto? → monto
+        "fecha": {"size": 40, "color": "#2e2b33", "pos": (80, 700)},   # Fecha → fecha del envío
+        "referencia": {"size": 40, "color": "#2e2b33", "pos": (80, 800)},  # Referencia → número de referencia
+        "disponible": {"size": 40, "color": "#2e2b33", "pos": (80, 900)}  # ¿De dónde salió la plata? → origen del dinero
     },
     "font": make_abs("fuentes/Manrope-Medium.ttf"),
 }
