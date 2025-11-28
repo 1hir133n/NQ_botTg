@@ -140,11 +140,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     with open(output_path, "rb") as f1, open(output_path_mov, "rb") as f2:
                         await update.message.reply_media_group(
                             media=[
-                                InputMediaDocument(f1),
-                                InputMediaDocument(f2)
+                                InputMediaDocument(f1, filename="Comprobante.png"),
+                                InputMediaDocument(f2, filename="Movimiento.png")
                             ]
                         )
-                    # ✅ Mensaje con nombre y @
                     user = update.effective_user
                     user_display = user.first_name
                     if user.username:
@@ -186,8 +185,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     with open(output_path, "rb") as f1, open(output_path_mov2, "rb") as f2:
                         await update.message.reply_media_group(
                             media=[
-                                InputMediaDocument(f1),
-                                InputMediaDocument(f2)
+                                InputMediaDocument(f1, filename="Comprobante.png"),
+                                InputMediaDocument(f2, filename="Movimiento.png")
                             ]
                         )
                     user = update.effective_user
@@ -228,8 +227,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     with open(output_path, "rb") as f1, open(output_path_movqr, "rb") as f2:
                         await update.message.reply_media_group(
                             media=[
-                                InputMediaDocument(f1),
-                                InputMediaDocument(f2)
+                                InputMediaDocument(f1, filename="Comprobante.png"),
+                                InputMediaDocument(f2, filename="Movimiento.png")
                             ]
                         )
                     user = update.effective_user
