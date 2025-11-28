@@ -52,10 +52,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         welcome_message = (
-            f"🎉 Bienvenido al Generador de Comprobantes\n"
-            f"💎 Servicio gratuito de alta calidad\n"
-            f"⚠️ Si pagaste por esto, contacta a {OWNER}\n"
-            f"Selecciona una opción:"
+            "✨ ¡Hola! Soy tu asistente de comprobantes falsos 🎭\n\n"
+            "📌 Selecciona el tipo de comprobante que deseas generar:"
         )
         
         await update.message.reply_text(welcome_message, reply_markup=reply_markup)
@@ -80,13 +78,13 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         user_data_store[user_id] = {"step": 0, "tipo": tipo, "session_id": str(uuid4())}
 
         prompts = {
-            "comprobante1": "👤 Ingresa el nombre completo:",
-            "comprobante4": "📱 Ingresa el número de teléfono:",
-            "comprobante_qr": "🏬 Nombre del negocio:",
+            "comprobante1": "👤 ¿Cuál es tu nombre (para el comprobante)?",
+            "comprobante4": "📱 Por favor, escribe tu número de celular (solo números, sin espacios ni guiones):",
+            "comprobante_qr": "🏬 ¿Cuál es el nombre del negocio o persona receptora?",
         }
 
         await query.message.reply_text(
-            prompts.get(tipo, "🔍 Por favor, inicia ingresando los datos requeridos:")
+            prompts.get(tipo, "🔍 Por favor, inicia ingresando los datos solicitados:")
         )
     
     except Exception as e:
@@ -111,67 +109,78 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         tipo = data["tipo"]
         step = data["step"]
 
-        # --- NEQUI ---
+        # --- NEQUI (AHORA CON 4 PASOS) ---
         if tipo == "comprobante1":
             if step == 0:
-                data["nombre"] = text
+                data["nombre_comprobante"] = text  # Nombre abreviado
                 data["step"] = 1
-                await update.message.reply_text("📱 Ingresa el número de teléfono (solo dígitos):")
+                await update.message.reply_text("👤 ¿Cuál es tu nombre completo (para el movimiento)?")
             elif step == 1:
+                data["nombre_movimiento"] = text  # Nombre completo
+                data["step"] = 2
+                await update.message.reply_text("📱 Por favor, escribe tu número de celular (solo números, sin espacios ni guiones):")
+            elif step == 2:
                 if not text.isdigit():
-                    await update.message.reply_text("⚠️ El número debe contener solo dígitos.")
+                    await update.message.reply_text("⚠️ El número debe contener solo dígitos. Inténtalo de nuevo.")
                     return
                 data["telefono"] = text
-                data["step"] = 2
-                await update.message.reply_text("💰 Ingresa el valor:")
-            elif step == 2:
+                data["step"] = 3
+                await update.message.reply_text("💰 ¿Cuál es el monto de la transacción? (Ej: 50000)")
+            elif step == 3:
                 if not text.lstrip("-").isdigit():
-                    await update.message.reply_text("⚠️ El valor debe ser numérico.")
+                    await update.message.reply_text("⚠️ El valor debe ser un número entero (sin puntos ni comas). Ej: 100000")
                     return
                 data["valor"] = int(text)
 
-                output_path = None
-                output_path_mov = None
-                try:
-                    output_path = generar_comprobante(data, COMPROBANTE1_CONFIG)
-                    data_mov = {"nombre": data["nombre"].upper(), "valor": -abs(data["valor"])}
-                    output_path_mov = generar_comprobante(data_mov, COMPROBANTE_MOVIMIENTO_CONFIG)
+                # === Generar comprobante (usa nombre_comprobante) ===
+                datos_comprobante = {
+                    "nombre": data["nombre_comprobante"],
+                    "telefono": data["telefono"],
+                    "valor": data["valor"]
+                }
+                output_path = generar_comprobante(datos_comprobante, COMPROBANTE1_CONFIG)
 
-                    with open(output_path, "rb") as f1, open(output_path_mov, "rb") as f2:
-                        await update.message.reply_media_group(
-                            media=[
-                                InputMediaDocument(f1, filename="Comprobante.png"),
-                                InputMediaDocument(f2, filename="Movimiento.png")
-                            ]
-                        )
-                    user = update.effective_user
-                    user_display = user.first_name
-                    if user.username:
-                        user_display += f" (@{user.username})"
-                    await update.message.reply_text(
-                        f"✅ ¡Comprobante & Movimiento generado!\n\n🆔 Usuario: {user_display}"
+                # === Generar movimiento (usa nombre_movimiento en mayúsculas) ===
+                datos_movimiento = {
+                    "nombre": data["nombre_movimiento"].upper(),
+                    "valor": -abs(data["valor"])
+                }
+                output_path_mov = generar_comprobante(datos_movimiento, COMPROBANTE_MOVIMIENTO_CONFIG)
+
+                # === Enviar ===
+                with open(output_path, "rb") as f1, open(output_path_mov, "rb") as f2:
+                    await update.message.reply_media_group(
+                        media=[
+                            InputMediaDocument(f1, filename="Comprobante.png"),
+                            InputMediaDocument(f2, filename="Movimiento.png")
+                        ]
                     )
-                except Exception as e:
-                    logger.exception("Error en Nequi")
-                    await update.message.reply_text("❌ Error al generar los comprobantes.")
-                finally:
-                    for path in [output_path, output_path_mov]:
-                        if path and os.path.exists(path):
-                            os.remove(path)
+                user = update.effective_user
+                user_display = user.first_name
+                if user.username:
+                    user_display += f" (@{user.username})"
+                await update.message.reply_text(
+                    f"✅ ¡Comprobante & Movimiento generado!\n\n🆔 Usuario: {user_display}"
+                )
+
+                # Limpiar
+                for path in [output_path, output_path_mov]:
+                    if path and os.path.exists(path):
+                        os.remove(path)
                 del user_data_store[user_id]
 
-        # --- TRANSFIYA ---
+        # --- TRANSFIYA (sin cambios en flujo) ---
         elif tipo == "comprobante4":
             if step == 0:
                 if not text.isdigit():
-                    await update.message.reply_text("⚠️ El número debe contener solo dígitos.")
+                    await update.message.reply_text("⚠️ El número debe contener solo dígitos. Inténtalo de nuevo.")
                     return
                 data["telefono"] = text
                 data["step"] = 1
-                await update.message.reply_text("💰 Ingresa el valor:")
+                await update.message.reply_text("💰 ¿Cuál es el monto de la transacción? (Ej: 50000)")
             elif step == 1:
                 if not text.lstrip("-").isdigit():
-                    await update.message.reply_text("⚠️ El valor debe ser numérico.")
+                    await update.message.reply_text("⚠️ El valor debe ser un número entero (sin puntos ni comas). Ej: 100000")
                     return
                 data["valor"] = int(text)
 
@@ -198,22 +207,22 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     )
                 except Exception as e:
                     logger.exception("Error en Transfiya")
-                    await update.message.reply_text("❌ Error al generar los comprobantes.")
+                    await update.message.reply_text("❌ Error al generar los comprobantes. Verifica los datos e intenta de nuevo.")
                 finally:
                     for path in [output_path, output_path_mov2]:
                         if path and os.path.exists(path):
                             os.remove(path)
                 del user_data_store[user_id]
 
-        # --- QR COMPROBANTE ---
+        # --- QR COMPROBANTE (sin cambios en flujo) ---
         elif tipo == "comprobante_qr":
             if step == 0:
                 data["nombre"] = text
                 data["step"] = 1
-                await update.message.reply_text("💰 Ingresa el valor:")
+                await update.message.reply_text("💰 ¿Cuál es el monto de la transacción? (Ej: 50000)")
             elif step == 1:
                 if not text.lstrip("-").isdigit():
-                    await update.message.reply_text("⚠️ El valor debe ser numérico.")
+                    await update.message.reply_text("⚠️ El valor debe ser un número entero (sin puntos ni comas). Ej: 100000")
                     return
                 data["valor"] = int(text)
 
@@ -240,7 +249,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     )
                 except Exception as e:
                     logger.exception("Error en QR")
-                    await update.message.reply_text("❌ Error al generar los comprobantes.")
+                    await update.message.reply_text("❌ Error al generar los comprobantes. Verifica los datos e intenta de nuevo.")
                 finally:
                     for path in [output_path, output_path_movqr]:
                         if path and os.path.exists(path):
@@ -249,13 +258,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     except Exception as e:
         logger.error(f"Error in handle_message for user {user_id} in chat {chat_id}: {str(e)}")
-        await update.message.reply_text("⚠️ Error al procesar los datos. Intenta de nuevo.")
+        await update.message.reply_text("⚠️ Error al procesar los datos. Por favor, inténtalo de nuevo.")
 
-# Admin Commands
+# === Comandos admin (sin cambios) ===
 async def gratis_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
-    
     try:
         if user_id == ADMIN_ID or auth_system.is_admin(user_id):
             logger.info(f"Admin {user_id} executed /gratis in chat {chat_id}")
@@ -263,22 +271,16 @@ async def gratis_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             await update.message.reply_text("✅ Modo GRATIS activado: Todos pueden usar el bot.")
         else:
             if chat_id != ALLOWED_GROUP:
-                logger.warning(f"Non-admin {user_id} tried /gratis in unauthorized chat {chat_id}")
                 await update.message.reply_text("🚫 Este comando solo puede usarse en el grupo autorizado.")
                 return
-            if not auth_system.is_admin(user_id):
-                logger.warning(f"Non-admin {user_id} tried /gratis")
-                await update.message.reply_text("🚫 Solo el administrador puede usar este comando.")
-                return
-    
+            await update.message.reply_text("🚫 Solo el administrador puede usar este comando.")
     except Exception as e:
-        logger.error(f"Error in gratis_command for user {user_id} in chat {chat_id}: {str(e)}")
+        logger.error(f"Error in gratis_command: {str(e)}")
         await update.message.reply_text("⚠️ Error al activar modo gratis.")
 
 async def off_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
-    
     try:
         if user_id == ADMIN_ID or auth_system.is_admin(user_id):
             logger.info(f"Admin {user_id} executed /off in chat {chat_id}")
@@ -286,25 +288,18 @@ async def off_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             await update.message.reply_text("✅ Modo OFF activado: Solo usuarios autorizados.")
         else:
             if chat_id != ALLOWED_GROUP:
-                logger.warning(f"Non-admin {user_id} tried /off in unauthorized chat {chat_id}")
                 await update.message.reply_text("🚫 Este comando solo puede usarse en el grupo autorizado.")
                 return
-            if not auth_system.is_admin(user_id):
-                logger.warning(f"Non-admin {user_id} tried /off")
-                await update.message.reply_text("🚫 Solo el administrador puede usar este comando.")
-                return
-    
+            await update.message.reply_text("🚫 Solo el administrador puede usar este comando.")
     except Exception as e:
-        logger.error(f"Error in off_command for user {user_id} in chat {chat_id}: {str(e)}")
+        logger.error(f"Error in off_command: {str(e)}")
         await update.message.reply_text("⚠️ Error al desactivar modo gratis.")
 
 async def agregar_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
-    
     try:
         if user_id == ADMIN_ID or auth_system.is_admin(user_id):
-            logger.info(f"Admin {user_id} executed /agregar in chat {chat_id}")
             if not context.args:
                 await update.message.reply_text("❓ Uso: /agregar <id_usuario>")
                 return
@@ -312,23 +307,18 @@ async def agregar_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             auth_system.add_user(target_user_id)
             await update.message.reply_text(f"✅ Usuario {target_user_id} autorizado.")
         else:
-            logger.warning(f"Non-admin {user_id} tried /agregar in chat {chat_id}")
             await update.message.reply_text("🚫 Solo el administrador puede usar este comando.")
-    
     except ValueError:
-        logger.error(f"Invalid user ID provided by {user_id} in chat {chat_id}")
         await update.message.reply_text("⚠️ ID de usuario inválido.")
     except Exception as e:
-        logger.error(f"Error in agregar_command for user {user_id} in chat {chat_id}: {str(e)}")
+        logger.error(f"Error in agregar_command: {str(e)}")
         await update.message.reply_text("⚠️ Error al agregar usuario.")
 
 async def eliminar_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
-    
     try:
         if user_id == ADMIN_ID or auth_system.is_admin(user_id):
-            logger.info(f"Admin {user_id} executed /eliminar in chat {chat_id}")
             if not context.args:
                 await update.message.reply_text("❓ Uso: /eliminar <id_usuario>")
                 return
@@ -338,55 +328,42 @@ async def eliminar_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             else:
                 await update.message.reply_text(f"⚠️ Usuario {target_user_id} no estaba autorizado.")
         else:
-            logger.warning(f"Non-admin {user_id} tried /eliminar in chat {chat_id}")
             await update.message.reply_text("🚫 Solo el administrador puede usar este comando.")
-    
     except ValueError:
-        logger.error(f"Invalid user ID provided by {user_id} in chat {chat_id}")
         await update.message.reply_text("⚠️ ID de usuario inválido.")
     except Exception as e:
-        logger.error(f"Error in eliminar_command for user {user_id} in chat {chat_id}: {str(e)}")
+        logger.error(f"Error in eliminar_command: {str(e)}")
         await update.message.reply_text("⚠️ Error al eliminar usuario.")
 
 async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
-    
     try:
         if user_id == ADMIN_ID or auth_system.is_admin(user_id):
-            logger.info(f"Admin {user_id} executed /stats in chat {chat_id}")
             stats = auth_system.get_stats()
             authorized_users = auth_system.get_authorized_users()
-            
             message = (
                 f"📊 **Estadísticas del Bot**\n\n"
                 f"👥 Usuarios autorizados: {stats['total_authorized']}\n"
                 f"🆓 Modo gratis: {'Activado' if stats['gratis_mode'] else 'Desactivado'}\n"
                 f"📱 Grupo permitido: {stats['allowed_group']}\n\n"
             )
-            
             if authorized_users:
                 message += "👤 Usuarios autorizados:\n" + "\n".join(f"  • {uid}" for uid in authorized_users)
             else:
                 message += "❌ No hay usuarios autorizados."
-            
             await update.message.reply_text(message)
         else:
-            logger.warning(f"Non-admin {user_id} tried /stats in chat {chat_id}")
             await update.message.reply_text("🚫 Solo el administrador puede usar este comando.")
-    
     except Exception as e:
-        logger.error(f"Error in stats_command for user {user_id} in chat {chat_id}: {str(e)}")
+        logger.error(f"Error in stats_command: {str(e)}")
         await update.message.reply_text("⚠️ Error al obtener estadísticas.")
 
 def main() -> None:
     try:
         logger.info(f"Initializing bot with admin ID: {ADMIN_ID}, allowed group: {ALLOWED_GROUP}")
-        
         if not BOT_TOKEN or ":" not in BOT_TOKEN:
-            logger.error("Invalid bot token provided")
             raise ValueError("Invalid bot token")
-
         app = Application.builder().token(BOT_TOKEN).build()
 
         app.add_handler(CommandHandler("start", start))
@@ -398,20 +375,14 @@ def main() -> None:
         app.add_handler(CallbackQueryHandler(button_handler))
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-        logger.info("Bot handlers registered successfully")
-        
-        # CORRECCIÓN PARA RENDER.COM: webhook URL SIN puerto
         port = int(os.environ.get("PORT", 10000))
         webhook_url = f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME')}"
-        
-        logger.info(f"Setting up webhook at {webhook_url}")
         app.run_webhook(
             listen="0.0.0.0",
             port=port,
             webhook_url=webhook_url,
             allowed_updates=Update.ALL_TYPES
         )
-    
     except Exception as e:
         logger.error(f"Fatal error in main: {str(e)}")
         raise
