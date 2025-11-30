@@ -14,6 +14,8 @@ import os
 import logging
 from uuid import uuid4
 from pathlib import Path
+from datetime import datetime
+import random
 
 # Setup logging
 logging.basicConfig(
@@ -214,7 +216,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                             os.remove(path)
                 del user_data_store[user_id]
 
-        # --- QR COMPROBANTE (ACTUALIZADO A 8 PASOS) ---
+        # --- QR COMPROBANTE (5 PASOS: 4 MANUALES + 3 AUTOMÁTICOS) ---
         elif tipo == "comprobante_qr":
             if step == 0:
                 data["nombre"] = text
@@ -234,26 +236,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     return
                 data["valor"] = int(text)
                 data["step"] = 4
-                await update.message.reply_text("📅 Por favor, ingresa la fecha (Fecha):")
-            elif step == 4:
-                data["fecha"] = text
-                data["step"] = 5
-                await update.message.reply_text("🔢 Por favor, ingresa la referencia (Referencia):")
-            elif step == 5:
-                data["referencia"] = text
-                data["step"] = 6
                 await update.message.reply_text("📱 Por favor, ingresa desde donde se hizo el envío (Desde donde se hizo el envío):")
-            elif step == 6:
+            elif step == 4:
                 data["origen_envio"] = text
-                data["step"] = 7
-                await update.message.reply_text("💧 Por favor, ingresa de dónde salió la plata (¿De dónde salió la plata?):")
-            elif step == 7:
-                data["disponible"] = text
+
+                # ⚙️ Generar automáticamente los campos faltantes
+                now = datetime.now()
+                data["fecha"] = now.strftime("%d de %B de %Y a las %I:%M %p").replace("AM", "a. m.").replace("PM", "p. m.")
+                data["referencia"] = "M" + str(random.randint(100000000, 999999999))
+                data["disponible"] = "Disponible"
 
                 output_path = None
                 output_path_movqr = None
                 try:
-                    # Preparamos los datos para el comprobante QR
                     datos_qr = {
                         "nombre": data["nombre"],
                         "llave": data["llave"],
@@ -266,14 +261,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     }
                     output_path = generar_comprobante(datos_qr, COMPROBANTE_QR_CONFIG)
                     
-                    # Preparamos los datos para el movimiento
                     datos_movimiento = {
                         "nombre": data["nombre"].upper(),
                         "valor": -abs(data["valor"])
                     }
                     output_path_movqr = generar_comprobante(datos_movimiento, COMPROBANTE_MOVIMIENTO3_CONFIG)
 
-                    # Enviamos ambos archivos
                     with open(output_path, "rb") as f1, open(output_path_movqr, "rb") as f2:
                         await update.message.reply_media_group(
                             media=[
