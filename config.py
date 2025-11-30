@@ -55,16 +55,18 @@ COMPROBANTE_MOVIMIENTO2_CONFIG = {
     "font": make_abs("fuentes/Manrope-Medium.ttf"),
 }
 
-# ✅ CONFIGURACIÓN ACTUALIZADA PARA LA NUEVA PLANTILLA QR
 COMPROBANTE_QR_CONFIG = {
     "template": make_abs("img/plantilla_qr.jpg"),
     "output": make_abs("comprobante_qr_generado.png"),
     "styles": {
-        "nombre": {"size": 40, "color": "#2e2b33", "pos": (80, 460)},
-        "valor1": {"size": 40, "color": "#2e2b33", "pos": (80, 540)},
-        "fecha": {"size": 40, "color": "#2e2b33", "pos": (80, 620)},
-        "referencia": {"size": 40, "color": "#2e2b33", "pos": (80, 700)},
-        "disponible": {"size": 40, "color": "#2e2b33", "pos": (80, 780)}
+        "nombre": {"size": 40, "color": "#2e2b33", "pos": (80, 460)},          # Para
+        "llave": {"size": 40, "color": "#2e2b33", "pos": (80, 540)},           # Llave
+        "banco_destino": {"size": 40, "color": "#2e2b33", "pos": (80, 620)},   # Banco destino
+        "valor1": {"size": 40, "color": "#2e2b33", "pos": (80, 700)},          # ¿Cuánto?
+        "fecha": {"size": 40, "color": "#2e2b33", "pos": (80, 780)},           # Fecha
+        "referencia": {"size": 40, "color": "#2e2b33", "pos": (80, 860)},      # Referencia
+        "origen_envio": {"size": 40, "color": "#2e2b33", "pos": (80, 940)},    # Desde donde se hizo el envío
+        "disponible": {"size": 40, "color": "#2e2b33", "pos": (80, 1020)}      # ¿De dónde salió la plata?
     },
     "font": make_abs("fuentes/Manrope-Medium.ttf"),
 }

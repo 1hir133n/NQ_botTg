@@ -214,30 +214,71 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                             os.remove(path)
                 del user_data_store[user_id]
 
-        # --- QR COMPROBANTE (sin cambios en flujo) ---
+        # --- QR COMPROBANTE (ACTUALIZADO A 8 PASOS) ---
         elif tipo == "comprobante_qr":
             if step == 0:
                 data["nombre"] = text
                 data["step"] = 1
-                await update.message.reply_text("💰 ¿Cuál es el monto de la transacción? (Ej: 50000)")
+                await update.message.reply_text("🔑 Por favor, ingresa la llave (Llave):")
             elif step == 1:
+                data["llave"] = text
+                data["step"] = 2
+                await update.message.reply_text("🏦 ¿Cuál es el banco destino (Banco destino)?")
+            elif step == 2:
+                data["banco_destino"] = text
+                data["step"] = 3
+                await update.message.reply_text("💰 ¿Cuál es el monto de la transacción? (Ej: 50000)")
+            elif step == 3:
                 if not text.lstrip("-").isdigit():
                     await update.message.reply_text("⚠️ El valor debe ser un número entero (sin puntos ni comas). Ej: 100000")
                     return
                 data["valor"] = int(text)
+                data["step"] = 4
+                await update.message.reply_text("📅 Por favor, ingresa la fecha (Fecha):")
+            elif step == 4:
+                data["fecha"] = text
+                data["step"] = 5
+                await update.message.reply_text("🔢 Por favor, ingresa la referencia (Referencia):")
+            elif step == 5:
+                data["referencia"] = text
+                data["step"] = 6
+                await update.message.reply_text("📱 Por favor, ingresa desde donde se hizo el envío (Desde donde se hizo el envío):")
+            elif step == 6:
+                data["origen_envio"] = text
+                data["step"] = 7
+                await update.message.reply_text("💧 Por favor, ingresa de dónde salió la plata (¿De dónde salió la plata?):")
+            elif step == 7:
+                data["disponible"] = text
 
                 output_path = None
-                output_path_mov = None
+                output_path_movqr = None
                 try:
-                    output_path = generar_comprobante(data, COMPROBANTE_QR_CONFIG)
-                    data_mov_qr = {"nombre": data["nombre"].upper(), "valor": -abs(data["valor"])}
-                    output_path_movqr = generar_comprobante(data_mov_qr, COMPROBANTE_MOVIMIENTO3_CONFIG)
+                    # Preparamos los datos para el comprobante QR
+                    datos_qr = {
+                        "nombre": data["nombre"],
+                        "llave": data["llave"],
+                        "banco_destino": data["banco_destino"],
+                        "valor1": f"${data['valor']:,}".replace(",", ".") + ",00",
+                        "fecha": data["fecha"],
+                        "referencia": data["referencia"],
+                        "origen_envio": data["origen_envio"],
+                        "disponible": data["disponible"]
+                    }
+                    output_path = generar_comprobante(datos_qr, COMPROBANTE_QR_CONFIG)
+                    
+                    # Preparamos los datos para el movimiento
+                    datos_movimiento = {
+                        "nombre": data["nombre"].upper(),
+                        "valor": -abs(data["valor"])
+                    }
+                    output_path_movqr = generar_comprobante(datos_movimiento, COMPROBANTE_MOVIMIENTO3_CONFIG)
 
+                    # Enviamos ambos archivos
                     with open(output_path, "rb") as f1, open(output_path_movqr, "rb") as f2:
                         await update.message.reply_media_group(
                             media=[
-                                InputMediaDocument(f1, filename="Comprobante.png"),
-                                InputMediaDocument(f2, filename="Movimiento.png")
+                                InputMediaDocument(f1, filename="Comprobante_QR.png"),
+                                InputMediaDocument(f2, filename="Movimiento_QR.png")
                             ]
                         )
                     user = update.effective_user
@@ -245,7 +286,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     if user.username:
                         user_display += f" (@{user.username})"
                     await update.message.reply_text(
-                        f"✅ ¡Comprobante & Movimiento generado!\n\n🆔 Usuario: {user_display}"
+                        f"✅ ¡Comprobante QR & Movimiento generado!\n\n🆔 Usuario: {user_display}"
                     )
                 except Exception as e:
                     logger.exception("Error en QR")
