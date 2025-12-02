@@ -110,8 +110,7 @@ def generar_comprobante(data, config):
 
     # Detectar tipo
     tipo_movimiento = "valor1" in styles and "nombre" in styles and "valor_decimal" in styles
-    es_comprobante_qr = config.get("output", "").endswith("comprobante_qr_generado.png")
-    es_comprobante4 = config.get("output", "").endswith("comprobante4_generado.png")
+    es_comprobante_qr = "comprobante_qr_generado.png" in config.get("output", "")
 
     if tipo_movimiento:
         # --- MOVIMIENTO ---
@@ -124,47 +123,29 @@ def generar_comprobante(data, config):
             fallback_font = ImageFont.load_default()
             draw.text(styles["nombre"]["pos"], data["nombre"], font=fallback_font, fill=styles["nombre"]["color"])
     else:
-        # --- COMPROBANTE NORMAL ---
-        fecha = obtener_fecha_es()
-        valor = data["valor"]
-        valor_formateado = "$ {:,.2f}".format(valor).replace(",", "X").replace(".", ",").replace("X", ".")
+        # --- ✅ COMPROBANTE QR O NORMAL: USAR DATOS RECIBIDOS DIRECTAMENTE ---
+        # Formatear el valor si está presente
+        if "valor" in data:
+            valor = data["valor"]
+            valor_formateado = "$ {:,.2f}".format(valor).replace(",", "X").replace(".", ",").replace("X", ".")
+            data["valor1"] = valor_formateado
 
-        telefono_raw = data.get("telefono", "")
-        telefono_formateado = (
-            telefono_raw if es_comprobante4 or es_comprobante_qr else
-            f"{telefono_raw[:3]} {telefono_raw[3:6]} {telefono_raw[6:]}" if telefono_raw.isdigit() and len(telefono_raw) == 10 else telefono_raw
-        )
+        # Dibujar todos los campos definidos en 'styles'
+        for campo, style in styles.items():
+            texto = data.get(campo, "")
+            if texto == "":
+                continue  # Saltar campos vacíos
 
-        datos = {
-            "telefono": telefono_formateado,
-            "nombre": data.get("nombre", ""),
-            "valor1": valor_formateado,
-            "fecha": fecha,
-            "referencia": f"M{random.randint(10000000, 99999999)}",
-            "disponible": "Disponible",
-        }
+            try:
+                font = ImageFont.truetype(font_path, style["size"])
+            except:
+                font = ImageFont.load_default()
 
-        if es_comprobante_qr:
-            datos = {
-                "nombre": data.get("nombre", ""),
-                "valor1": valor_formateado,
-                "fecha": fecha,
-                "referencia": f"M{random.randint(10000000, 99999999)}",
-                "disponible": "Disponible",
-            }
-
-        for campo, texto in datos.items():
-            if campo in styles:
-                style = styles[campo]
-                try:
-                    font = ImageFont.truetype(font_path, style["size"])
-                except:
-                    font = ImageFont.load_default()
-                if campo == "valor1":
-                    pos_x, pos_y = style["pos"]
-                    draw_text_with_outline(draw, (pos_x, pos_y), str(texto), font, style["color"])
-                else:
-                    draw_text_with_outline(draw, style["pos"], str(texto), font, style["color"])
+            if campo == "valor1":
+                pos_x, pos_y = style["pos"]
+                draw_text_with_outline(draw, (pos_x, pos_y), str(texto), font, style["color"])
+            else:
+                draw_text_with_outline(draw, style["pos"], str(texto), font, style["color"])
 
     # Guardar y devolver
     output_path = f"gen_{uuid.uuid4().hex}.png"
