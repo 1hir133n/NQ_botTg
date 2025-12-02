@@ -16,6 +16,7 @@ from uuid import uuid4
 from pathlib import Path
 from datetime import datetime
 import random
+import pytz  # ← ¡Importante para la zona horaria!
 
 # Setup logging
 logging.basicConfig(
@@ -54,7 +55,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         welcome_message = (
-            "✨ ¡Hola! Soy tu asistente de comprobantes falsos 🎭\n\n"
+            "✨ ¡Hola! Soy tu asistente de comprobantes  🎭\n\n"
             "📌 Selecciona el tipo de comprobante que deseas generar:"
         )
         
@@ -241,7 +242,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 data["origen_envio"] = text
 
                 # ⚙️ Generar automáticamente los campos faltantes
-                now = datetime.now()
+                # ✅ Usa la zona horaria de Bogotá
+                bogota_tz = pytz.timezone("America/Bogota")
+                now = datetime.now(bogota_tz)
                 data["fecha"] = now.strftime("%d de %B de %Y a las %I:%M %p").replace("AM", "a. m.").replace("PM", "p. m.")
                 data["referencia"] = "M" + str(random.randint(100000000, 999999999))
                 data["disponible"] = "Disponible"
