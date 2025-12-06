@@ -59,14 +59,14 @@ COMPROBANTE_QR_CONFIG = {
     "template": make_abs("img/plantilla_qr.jpg"),
     "output": make_abs("comprobante_qr_generado.png"),
     "styles": {
-        "nombre": {"size": 40, "color": "#2e2b33", "pos": (230, 1180)},       # Debajo de "Para"
-        "llave": {"size": 40, "color": "#2e2b33", "pos": (230, 1260)},        # Debajo de "Llave"
-        "banco_destino": {"size": 40, "color": "#2e2b33", "pos": (230, 1340)}, # Debajo de "Banco destino"
-        "valor1": {"size": 40, "color": "#2e2b33", "pos": (230, 1420)},       # Debajo de "¿Cuánto?"
-        "fecha": {"size": 40, "color": "#2e2b33", "pos": (230, 1500)},        # Debajo de "Fecha"
-        "referencia": {"size": 40, "color": "#2e2b33", "pos": (230, 1580)},   # Debajo de "Referencia"
-        "origen_envio": {"size": 40, "color": "#2e2b33", "pos": (230, 1660)}, # Debajo de "Desde donde se hizo el envío"
-        "disponible": {"size": 40, "color": "#2e2b33", "pos": (230, 1740)}    # Debajo de "¿De dónde salió la plata?"
+        "nombre": {"size": 22, "color": "#2e2b33", "pos": (80, 460)},          # Debajo de "Para"
+        "llave": {"size": 22, "color": "#2e2b33", "pos": (80, 540)},           # Debajo de "Llave"
+        "banco_destino": {"size": 22, "color": "#2e2b33", "pos": (80, 620)},   # Debajo de "Banco destino"
+        "valor1": {"size": 22, "color": "#2e2b33", "pos": (80, 700)},          # Debajo de "¿Cuánto?"
+        "fecha": {"size": 22, "color": "#2e2b33", "pos": (80, 780)},           # Debajo de "Fecha"
+        "referencia": {"size": 22, "color": "#2e2b33", "pos": (80, 860)},      # Debajo de "Referencia"
+        "origen_envio": {"size": 22, "color": "#2e2b33", "pos": (80, 940)},    # Debajo de "Desde donde se hizo el envío"
+        "disponible": {"size": 22, "color": "#2e2b33", "pos": (80, 1020)}      # Debajo de "¿De dónde salió la plata?"
     },
     "font": make_abs("fuentes/Manrope-Medium.ttf"),
 }
